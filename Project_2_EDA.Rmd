@@ -1,0 +1,975 @@
+---
+title: "DDS-Project-2"
+author: "Elyjiah Potter"
+date: "11/24/2021"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(png)
+library(ggimage)
+library(magick)
+library(naniar)
+library(plotly)
+library(class)
+library(caret)
+library(e1071)
+library(maps)
+library(mapproj)
+library(usmap)
+library(maptools)
+library(rgdal)
+library(GGally)
+library(e1071)
+```
+
+# Case Study 2 EDA
+
+## Import Data
+
+```{r}
+data = read.csv('/Users/elyjiahpotter/Desktop/DDS-Project-2/CaseStudy2-data.csv')
+
+head(data)
+
+```
+
+<br>
+
+## Check for missing values
+
+```{r}
+gg_miss_var(data)
+```
+
+<br>
+
+## Adjust Attrition Variable for Modeling
+
+```{r}
+data =data %>%
+  mutate(Attr = case_when( Attrition == "Yes" ~ 1,
+                           Attrition == "No" ~ 0))
+```
+
+<br>
+
+## Investigate Distributions of Potentially Relevant Discrete Variablees
+
+```{r}
+data %>% ggplot(aes(x = Age, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = DailyRate, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = DistanceFromHome, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = Education, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = EnvironmentSatisfaction, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = HourlyRate, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = JobInvolvement, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = JobLevel, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = JobSatisfaction, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = MonthlyIncome, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = MonthlyRate, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = NumCompaniesWorked, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = PercentSalaryHike, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = RelationshipSatisfaction, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = StockOptionLevel, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = TotalWorkingYears, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = TrainingTimesLastYear, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = WorkLifeBalance, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = YearsAtCompany, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = YearsInCurrentRole, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = YearsSinceLastPromotion, fill = Attrition)) + geom_boxplot()
+data %>% ggplot(aes(x = YearsWithCurrManager, fill = Attrition)) + geom_boxplot()
+```
+
+<br>
+
+## Investigate Distributions of Potentially Relevant Categorical Variables
+
+```{r}
+data %>% ggplot(aes(x = BusinessTravel, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = EducationField, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = Gender, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = MaritalStatus, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = Over18, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = JobRole, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = OverTime, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+data %>% ggplot(aes(x = Department, fill = Attrition)) + geom_histogram(stat = "count") + facet_wrap(~Attrition)
+```
+
+<br>
+
+# Age Breakdown
+
+```{r}
+
+#Aggregate Data
+age_factor = cut(data$Age, breaks = c(13,19,29,39,49,59,69,79,89), labels = c("Teens", "Twenties", "Thirties", "Forties", "Fifties","Sixties","Seventies","Eighties"))
+
+data = data %>%
+  mutate(age_range = age_factor)
+
+data %>%
+  group_by(age_range) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n()) 
+
+# Plot Aggregated Data - Barplot
+data %>%
+  group_by(age_range) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())  %>%
+  ggplot(aes(x = age_range, y = perc_attrition, fill = age_range)) +
+  geom_bar(stat = "identity") +
+  ggtitle("% Attrition by Age") +
+  xlab("Age") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+
+data = data %>% 
+  mutate(age_order = case_when(
+    grepl("Teens",age_range) ~ 1,
+    grepl("Twenties",age_range) ~ 2,
+    grepl("Thirties",age_range) ~ 3,
+    grepl( "Forties",age_range) ~ 4,
+    grepl("Fifties",age_range) ~ 5,
+    grepl("Sixties",age_range) ~ 6
+  ))
+
+
+# Scatterplot Comparison
+
+data %>%
+  group_by(age_range, age_order) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())  %>%
+  ggplot(aes(x = age_order, y = perc_attrition)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("% Attrition by Age") +
+  xlab("Age Rank") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+```
+
+<br>
+
+## Satisfaction Score Creation
+
+```{r}
+data = data %>%
+  mutate(OverallSatisfaction = (JobSatisfaction+EnvironmentSatisfaction+WorkLifeBalance+RelationshipSatisfaction)/4)
+
+data %>%
+  group_by(OverallSatisfaction) %>%
+   summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = OverallSatisfaction, perc_attrition)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ylim(0,1)
+```
+
+<br>
+
+# Involvement Score Creation
+
+```{r}
+data = data %>%
+  mutate(Involvement = (JobInvolvement+TrainingTimesLastYear+StockOptionLevel)/3)
+
+data %>%
+  group_by(Involvement) %>%
+  summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = Involvement, y = perc_attrition)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+  
+```
+
+<br>
+
+
+# Percent Attrition by key Discrete attributes
+```{r}
+# Years by perc attrition
+data %>%
+  group_by(YearsAtCompany) %>%
+  summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = YearsAtCompany, y = perc_attrition)) +
+  geom_point()
+
+data %>%
+  group_by(YearsAtCompany) %>%
+ summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = YearsAtCompany, y = perc_attrition)) +
+  geom_point()
+
+# Distance by perc Attrition
+data %>%
+  group_by(DistanceFromHome) %>%
+ summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = DistanceFromHome, y = perc_attrition)) +
+  geom_point()
+
+# Total Working Years by Attrition
+data %>%
+  group_by(TotalWorkingYears) %>%
+ summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = TotalWorkingYears, y = perc_attrition)) +
+  geom_point()
+
+```
+
+
+<br>
+
+# Percent Attrition by key Categorical attributes
+
+```{r}
+
+# Higher chance of attrition for teen males
+data %>%
+  group_by(age_range, Gender) %>%
+  summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = age_range, y = Gender, fill = perc_attrition)) + 
+  geom_tile()
+
+# Higher chance of attrition for sales representatives
+data %>%
+  group_by(Department, JobRole) %>%
+  summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = Department, y = JobRole, fill = perc_attrition)) + 
+  geom_tile()
+
+# Higher chance of attrition for single individuals with a technical degree
+data %>%
+  group_by(MaritalStatus, EducationField) %>%
+  summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = MaritalStatus, y = EducationField, fill = perc_attrition)) + 
+  geom_tile()
+```
+
+
+<br>
+
+
+## Education Field Attrition
+
+```{r}
+#Aggregate Data
+
+data %>%
+  group_by(EducationField) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n()) 
+
+# Plot Aggregated Data
+data %>%
+  group_by(EducationField) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())  %>%
+  ggplot(aes(x = reorder(EducationField, perc_attrition), y = perc_attrition, fill = EducationField)) +
+  geom_bar(stat = "identity") +
+  ggtitle("% Attrition by Education Field") +
+  xlab("Education Field") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+```
+
+
+<br>
+
+## Education Field Satisfaction
+
+```{r}
+#Aggregate Data
+
+data %>%
+  group_by(EducationField) %>%
+  summarize(Count = n(), avg_satisfaction = sum(JobSatisfaction)/n()) 
+
+# Plot Aggregated Data
+data %>%
+  group_by(EducationField) %>%
+  summarize(Count = n(), avg_satisfaction = sum(JobSatisfaction)/n()) %>%
+  ggplot(aes(x = reorder(EducationField, avg_satisfaction), y = avg_satisfaction, fill = EducationField)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Avg Satisfaction by Education Field") +
+  xlab("Education Field") +
+  ylab("Avg Satisfaction") +
+  coord_cartesian(ylim=c(2.4,2.75)) +
+  theme(legend.position = "none") 
+
+```
+
+
+<br>
+
+## Position Attrition
+
+```{r}
+
+#Aggregate Data
+data %>%
+  group_by(JobRole) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n()) 
+
+# Plot Aggregated Data
+
+data %>%
+  group_by(JobRole) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())  %>%
+  ggplot(aes(x = reorder(JobRole, perc_attrition), y = perc_attrition, fill = JobRole)) +
+  geom_bar(stat = "identity") +
+  ggtitle("% Attrition by Position") +
+  xlab("Position") +
+  ylab("% Attrition") +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 50, 
+                                   vjust = 1, 
+                                   hjust = 1,
+                                   size = 8))
+```
+
+
+<br>
+
+## Position Avg Satisfaction
+
+```{r}
+
+#Aggregate Data
+data %>%
+  group_by(JobRole) %>%
+  summarize(Count = n(),avg_satisfaction = sum(JobSatisfaction)/n()) 
+
+# Plot Aggregated Data
+
+data %>%
+  group_by(JobRole) %>%
+  summarize(Count = n(),avg_satisfaction = sum(JobSatisfaction)/n())   %>%
+  ggplot(aes(x = reorder(JobRole,avg_satisfaction), y = avg_satisfaction, fill = JobRole)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Avg Satisfaction by Position") +
+  xlab("Position") +
+  ylab("Avg Satisfaction") +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim=c(2.4,2.85)) +
+  theme(axis.text.x = element_text(angle = 50, 
+                                   vjust = 1, 
+                                   hjust = 1,
+                                   size = 8))
+```
+
+
+<br>
+
+
+## Gender / Age Attrition
+
+```{r}
+
+#Aggregate Data
+age_data = data %>%
+  group_by(Gender, age_range) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())
+
+age_gender = data.frame(paste(age_data$Gender, age_data$age_range))
+colnames(age_gender) = "age_gender"
+age_data = cbind(age_data, age_gender)
+age_data$age_gender = factor(age_data$age_gender)
+
+age_data = age_data %>% 
+  mutate(order = case_when(
+    grepl("Teens",age_range) ~ 1,
+    grepl("Twenties",age_range) ~ 2,
+    grepl("Thirties",age_range) ~ 3,
+    grepl( "Forties",age_range) ~ 4,
+    grepl("Fifties",age_range) ~ 5,
+    grepl("Sixties",age_range) ~ 6
+  ))
+
+# Plot Aggregated Data
+
+age_data %>%
+  ggplot(aes(x = reorder(age_gender,order), y = perc_attrition, fill = Gender)) +
+  geom_bar(stat = "identity") +
+  ggtitle("% Attrition by Age and Gender") +
+  xlab("Age / Gender") +
+  ylab("% Attrition") +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 50, 
+                                   vjust = 1, 
+                                   hjust = 1,
+                                   size = 8))
+```
+
+
+<br>
+
+## Gender / Age Avg Satisfaction
+
+```{r}
+
+#Aggregate Data
+age_data = data %>%
+  group_by(Gender, age_range) %>%
+  summarize(Count = n(), avg_satisfaction = sum(JobSatisfaction)/n())
+
+age_gender = data.frame(paste(age_data$Gender, age_data$age_range))
+colnames(age_gender) = "age_gender"
+age_data = cbind(age_data, age_gender)
+age_data$age_gender = factor(age_data$age_gender)
+
+age_data = age_data %>% 
+  mutate(order = case_when(
+    grepl("Teens",age_range) ~ 1,
+    grepl("Twenties",age_range) ~ 2,
+    grepl("Thirties",age_range) ~ 3,
+    grepl( "Forties",age_range) ~ 4,
+    grepl("Fifties",age_range) ~ 5,
+    grepl("Sixties",age_range) ~ 6
+  ))
+
+# Plot Aggregated Data
+
+age_data %>%
+  ggplot(aes(x = reorder(age_gender,order), y = avg_satisfaction, fill = Gender)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Avg Satisfaction by Age and Gender") +
+  xlab("Age / Gender") +
+  ylab("Avg Satisfaction") +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim=c(2.4,3.2)) +
+  theme(axis.text.x = element_text(angle = 50, 
+                                   vjust = 1, 
+                                   hjust = 1,
+                                   size = 8))
+```
+
+
+<br>
+
+## Gender / Age / Marital Status Attrition
+
+```{r}
+#Aggregate Data
+age_data = data %>%
+  group_by(MaritalStatus, Gender, age_range) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())
+
+age_gender = data.frame(paste(age_data$Gender, age_data$MaritalStatus, age_data$age_range))
+colnames(age_gender) = "age_gender_marital"
+age_data = cbind(age_data, age_gender)
+age_data$age_gender_marital = factor(age_data$age_gender_marital)
+
+age_data = age_data %>% 
+  mutate(order = case_when(
+    grepl("Teens",age_range) ~ 1,
+    grepl("Twenties",age_range) ~ 2,
+    grepl("Thirties",age_range) ~ 3,
+    grepl( "Forties",age_range) ~ 4,
+    grepl("Fifties",age_range) ~ 5,
+    grepl("Sixties",age_range) ~ 6
+  ))
+
+# Plot Aggregated Data
+
+age_data %>%
+  ggplot(aes(x = reorder(age_gender_marital,order), y = perc_attrition, fill = Gender)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("% Attrition by Age, Gender, and Marital Status") +
+  xlab("Age / Gender / Marital Status") +
+  ylab("% Attrition") +
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 50, 
+                                   vjust = 1, 
+                                   hjust = 1,
+                                   size = 8))
+```
+
+
+<br>
+
+## Investigate Key Categorization Attributes
+
+#### Use constant value Over18 for y value for consistent comparison
+
+```{r}
+for(i in 2:40)
+{
+
+ p = ggplot(data = data, mapping = aes(x = data[,i], y = Over18, color = Attr)) + geom_point(position = "jitter") + xlab(colnames(data[i]))
+ print(p)
+
+}
+```
+
+<br>
+
+
+## Clean up data for modeling
+
+```{r} 
+data2 = select_if(data,is.numeric)
+data2 = data2[,1:31]
+
+
+data2_not = select(data,!is.numeric)
+data2_not = data2_not[,2:9]
+
+data2_not = data2_not %>% 
+  mutate(BusinessTravelRank = case_when(
+    grepl("Non-Travel", BusinessTravel) ~ 0,
+    grepl("Travel_Rarely", BusinessTravel) ~ 1,
+    grepl("Travel_Frequently", BusinessTravel) ~ 3
+  )) %>%
+  mutate(DepartmentRank = case_when(
+    grepl("Research & Development", Department) ~ 1,
+    grepl("Human Resources", Department) ~ 2,
+    grepl("Sales", Department) ~ 3
+  )) %>%
+  mutate(EducationFieldRank = case_when(
+    grepl("Life Sciences", EducationField) ~ 1,
+    grepl("Medical", EducationField) ~ 2,
+    grepl("Marketing", EducationField) ~ 3,
+    grepl("Technical Degree", EducationField) ~ 4,
+    grepl("Other", EducationField) ~ 5,
+    grepl("Human Resources", EducationField) ~ 6
+  )) %>%
+  mutate(GenderRank = case_when(
+    grepl("Male", Gender) ~ 0,
+    grepl("Female", Gender) ~ 1
+  )) %>%
+  mutate(OvertimeRank = case_when(
+    grepl("Yes", OverTime) ~ 0,
+    grepl("No", OverTime) ~ 1
+  ))
+
+data2_not = select_if(data2_not,is.numeric)
+  
+data2 = cbind(data2,data2_not)
+
+gg_miss_var(data2)
+```
+
+<br>
+
+# Classification: KNN
+
+```{r}
+splitPerc = 0.75
+trainInices = sample(1:dim(data2)[1], round(splitPerc * dim(data2)[1]))
+
+train = data2[trainInices,]
+test = data2[-trainInices,]
+
+
+# Create model info dataframe
+model_info = data.frame(matrix(ncol = 3, nrow = 100000))
+colnames(model_info) = c("Model", "Sensitivity","Specificity")
+
+tic = 1 # Ticker for loop
+
+# Uncomment for k value loop
+# for(l in 2:30)
+#{
+  for (i in 2:36)
+  {
+    for(j in i:36)
+    {
+      for(k in j:36)
+      {
+        classifications = knn(train[,c(i,j,k)], test[,c(i,j,k)], train$Attr, prob = TRUE, k = 11)
+        table(classifications, test$Attr)
+        x = confusionMatrix(table(classifications, test$Attr))
+  
+        # Comment for k valu eloop
+        model_info$Model[tic]=(paste("Model for ",colnames(data2[i]), " and ", colnames(data2[j]), " and ", colnames(data2[k])))
+  
+        # Uncomment for k value loop
+        # model_info$Model[tic]=(paste("Model for ",colnames(data2[i]), " and ", colnames(data2[j]), " and ", colnames(data2[k]), " and k = ", l))
+  
+        model_info$Sensitivity[tic] = x$byClass[1]
+        model_info$Specificity[tic] = x$byClass[2]
+  
+        tic = tic + 1
+      }
+    }
+  }
+#} Uncomment for k value loop
+
+output = model_info %>% 
+  filter(!grepl("Attr",Model)) %>%
+  arrange(-Specificity)
+
+head(output)
+```
+
+<br>
+
+# Classification: Naive Bayes
+
+```{r}
+bayes_model = naiveBayes(Attr~., data = data2)
+predict(bayes_model, data2)
+confusionMatrix(table(predict(bayes_model,data2), data2$Attr))
+
+# Note - while we initially worked to construct a knn model, the max specificity we could obtain was roughly 30%. Since this was below our 60% threshold, we moved forward with a probability based naive bayes model instead.
+```
+
+
+<br>
+
+
+# Linear Regression Model Investigation for correlation
+
+```{r}
+for(i in 2:36)
+{
+
+ p = ggplot(data = data2, mapping = aes(x = data2[,i], y = MonthlyIncome,)) + geom_point(position = "jitter") + geom_smooth(method = "lm") + xlab(colnames(data2[i]))
+ print(p)
+
+}
+```
+<br>
+
+# Top Attributes:
+
+* Age
+* Education
+* Job Level 
+* Total Working Years 
+* Years at Company 
+* Years in current role 
+* Years since last promotion
+* Years with current manager
+
+## Collinearity
+
+* Job Level Total Working Years, Years at Company, Years in Current Role, Years since Last promotion, and Years with current manager are all likely correlated, so we will use the one with the strongest correlation with income: Job Level
+
+# Linear Regression Model with Top 3 correlating attributes 
+
+```{r}
+fit = lm(MonthlyIncome ~ Age + JobLevel + Education , data = data2) 
+summary(fit)
+
+RSS = c(crossprod(fit$residuals))
+MSE = RSS/length(fit$residuals)
+RMSE = sqrt(MSE)
+print(RMSE)
+```
+
+
+<br>
+
+
+# Testing other regression combinations
+
+```{r warning = FALSE}
+model_df = data.frame(matrix(ncol = 6, nrow = 100000))
+colnames(model_df) = c("Model", "Intercept","First", "Second", "Third", "RMSE")
+
+tic = 0
+  for (i in 2:36) 
+  {
+    for(j in i:36)
+    {
+      for(k in j:36)
+      {
+        
+        fit = lm(MonthlyIncome ~ data2[,i] + data2[,j] + data2[,k] , data = data2) 
+        x = summary(fit)
+        RSS = c(crossprod(fit$residuals))
+        MSE = RSS/length(fit$residuals)
+        RMSE = sqrt(MSE)
+        
+        model_df$Model[tic] = paste(colnames(data2[i]), " and ", colnames(data2[j]), " and ", colnames(data2[k]))
+        model_df$Intercept[tic] = x$coefficients[13]
+        model_df$First[tic] = x$coefficients[14]
+        model_df$Second[tic] = x$coefficients[15]
+        model_df$Third[tic] = x$coefficients[16]
+        model_df$RMSE[tic] = RMSE
+        
+        tic = tic + 1
+      }
+    }
+  }
+
+output = model_df %>%
+  filter(!grepl("MonthlyIncome", Model)) %>%
+  filter(!is.na(Intercept)) %>%
+  arrange(RMSE)
+
+head(output)
+```
+
+<br>
+
+# Findings: JobLevel, age_order and DepartmentRank yield the lowest RMSE from the attribute set combinataions that are not collinear
+
+# Final Linear Regression Model
+
+```{r}
+lin_fit = lm(MonthlyIncome ~ JobLevel + age_order + DepartmentRank , data = data2) 
+summary(lin_fit)
+
+RSS = c(crossprod(lin_fit$residuals))
+MSE = RSS/length(lin_fit$residuals)
+RMSE = sqrt(MSE)
+print(RMSE)
+```
+
+
+<br>
+
+
+# Top Three Factors for Attrition
+
+* Age
+
+* Involvement
+
+* Satisfaction Score
+
+<br>
+
+## Age vs % Attrition
+
+```{r}
+
+data %>%
+  group_by(age_range) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())  %>%
+  ggplot(aes(x = age_range, y = perc_attrition, fill = age_range)) +
+  geom_bar(stat = "identity") +
+  ggtitle("% Attrition by Age") +
+  xlab("Age") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+
+
+data %>%
+  group_by(age_range, age_order) %>%
+  summarize(attrition_count = sum(Attr), Count = n(), perc_attrition = sum(Attr)/n())  %>%
+  ggplot(aes(x = age_order, y = perc_attrition)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("% Attrition by Age") +
+  xlab("Age Rank") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+```
+
+<br>
+
+## Satisfaction Score vs % Attrition
+
+```{r}
+data = data %>%
+  mutate(OverallSatisfaction = (JobSatisfaction+EnvironmentSatisfaction+WorkLifeBalance+RelationshipSatisfaction)/4)
+
+data %>%
+  group_by(OverallSatisfaction) %>%
+   summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = OverallSatisfaction, perc_attrition)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ylim(0,1) + 
+  ggtitle("% Attrition by Satisfaction Score") +
+  xlab("Score") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+```
+
+<br>
+
+# Involvement Score vs % Attrition
+
+```{r}
+data = data %>%
+  mutate(Involvement = (JobInvolvement+TrainingTimesLastYear+StockOptionLevel)/3)
+
+data %>%
+  group_by(Involvement) %>%
+  summarize(perc_attrition = sum(Attr)/n()) %>%
+  ggplot(aes(x = Involvement, y = perc_attrition)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("% Attrition by Involvement Score") +
+  xlab("Score") +
+  ylab("% Attrition") +
+  theme(legend.position = "none")
+  
+  
+```
+
+
+<br>
+
+# Testing Naive Bayes and Linear Regression Model
+
+
+## Import and Transform Data
+
+```{r}
+class = read.csv("/Users/elyjiahpotter/Desktop/CaseStudy2CompSet No Attrition.csv")
+linear = read.csv("/Users/elyjiahpotter/Desktop/CaseStudy2CompSet No Salary.csv")
+
+# Adjust to include an Attr column (dummy column to maintain dataset architecture)
+class = class %>%
+  mutate(Attr = 0)
+
+age_factor = cut(class$Age, breaks = c(13,19,29,39,49,59,69,79,89), labels = c("Teens", "Twenties", "Thirties", "Forties", "Fifties","Sixties","Seventies","Eighties"))
+
+class = class %>%
+  mutate(age_range = age_factor)
+
+class = class %>% 
+  mutate(age_order = case_when(
+    grepl("Teens",age_range) ~ 1,
+    grepl("Twenties",age_range) ~ 2,
+    grepl("Thirties",age_range) ~ 3,
+    grepl( "Forties",age_range) ~ 4,
+    grepl("Fifties",age_range) ~ 5,
+    grepl("Sixties",age_range) ~ 6
+  ))
+
+class = class %>%
+  mutate(OverallSatisfaction = (JobSatisfaction+EnvironmentSatisfaction+WorkLifeBalance+RelationshipSatisfaction)/4) %>%
+  mutate(Involvement = (JobInvolvement+TrainingTimesLastYear+StockOptionLevel)/3)
+
+class2 = select_if(class,is.numeric)
+class2 = class2[,1:31]
+
+class2_not = select(class,!is.numeric)
+
+class2_not = class2_not %>% 
+  mutate(BusinessTravelRank = case_when(
+    grepl("Non-Travel", BusinessTravel) ~ 0,
+    grepl("Travel_Rarely", BusinessTravel) ~ 1,
+    grepl("Travel_Frequently", BusinessTravel) ~ 3
+  )) %>%
+  mutate(DepartmentRank = case_when(
+    grepl("Research & Development", Department) ~ 1,
+    grepl("Human Resources", Department) ~ 2,
+    grepl("Sales", Department) ~ 3
+  )) %>%
+  mutate(EducationFieldRank = case_when(
+    grepl("Life Sciences", EducationField) ~ 1,
+    grepl("Medical", EducationField) ~ 2,
+    grepl("Marketing", EducationField) ~ 3,
+    grepl("Technical Degree", EducationField) ~ 4,
+    grepl("Other", EducationField) ~ 5,
+    grepl("Human Resources", EducationField) ~ 6
+  )) %>%
+  mutate(GenderRank = case_when(
+    grepl("Male", Gender) ~ 0,
+    grepl("Female", Gender) ~ 1
+  )) %>%
+  mutate(OvertimeRank = case_when(
+    grepl("Yes", OverTime) ~ 0,
+    grepl("No", OverTime) ~ 1
+  ))
+
+class2_not = select_if(class2_not,is.numeric)
+  
+class2 = cbind(class2,class2_not)
+
+gg_miss_var(class2)
+
+linear = linear %>%
+   mutate(Attr = case_when( Attrition == "Yes" ~ 1,
+                           Attrition == "No" ~ 0))
+
+age_factor = cut(linear$Age, breaks = c(13,19,29,39,49,59,69,79,89), labels = c("Teens", "Twenties", "Thirties", "Forties", "Fifties","Sixties","Seventies","Eighties"))
+
+linear = linear %>%
+  mutate(age_range = age_factor)
+
+linear = linear %>% 
+  mutate(age_order = case_when(
+    grepl("Teens",age_range) ~ 1,
+    grepl("Twenties",age_range) ~ 2,
+    grepl("Thirties",age_range) ~ 3,
+    grepl( "Forties",age_range) ~ 4,
+    grepl("Fifties",age_range) ~ 5,
+    grepl("Sixties",age_range) ~ 6
+  ))
+
+linear = linear %>%
+  mutate(OverallSatisfaction = (JobSatisfaction+EnvironmentSatisfaction+WorkLifeBalance+RelationshipSatisfaction)/4) %>%
+  mutate(Involvement = (JobInvolvement+TrainingTimesLastYear+StockOptionLevel)/3)
+
+linear2 = select_if(linear,is.numeric)
+linear2 = linear2[,1:30]
+
+linear2_not = select(linear,!is.numeric)
+
+linear2_not = linear2_not %>% 
+  mutate(BusinessTravelRank = case_when(
+    grepl("Non-Travel", BusinessTravel) ~ 0,
+    grepl("Travel_Rarely", BusinessTravel) ~ 1,
+    grepl("Travel_Frequently", BusinessTravel) ~ 3
+  )) %>%
+  mutate(DepartmentRank = case_when(
+    grepl("Research & Development", Department) ~ 1,
+    grepl("Human Resources", Department) ~ 2,
+    grepl("Sales", Department) ~ 3
+  )) %>%
+  mutate(EducationFieldRank = case_when(
+    grepl("Life Sciences", EducationField) ~ 1,
+    grepl("Medical", EducationField) ~ 2,
+    grepl("Marketing", EducationField) ~ 3,
+    grepl("Technical Degree", EducationField) ~ 4,
+    grepl("Other", EducationField) ~ 5,
+    grepl("Human Resources", EducationField) ~ 6
+  )) %>%
+  mutate(GenderRank = case_when(
+    grepl("Male", Gender) ~ 0,
+    grepl("Female", Gender) ~ 1
+  )) %>%
+  mutate(OvertimeRank = case_when(
+    grepl("Yes", OverTime) ~ 0,
+    grepl("No", OverTime) ~ 1
+  ))
+
+linear2_not = select_if(linear2_not,is.numeric)
+  
+linear2 = cbind(linear2,linear2_not)
+
+gg_miss_var(linear2)
+```
+
+## Test Classification Model
+
+```{r}
+predict(bayes_model, class2)
+
+results = data.frame(table(class2$ID,predict(bayes_model,class2)))
+
+colnames(results) = c("ID", "No Attrition", "Attrition")
+
+head(results)
+
+write.csv(results, "/Users/elyjiahpotter/Desktop/CaseStudy2_Classification_Results.csv")
+```
+
+## Test Linear Regression Model
+
+```{r}
+testing_data = linear2 %>%
+  select(JobLevel, age_order, DepartmentRank)
+
+results = data.frame(linear2$ID,predict(lin_fit, newdata = testing_data))
+
+colnames(results) = c("ID", "Predicted Monthly Salary")
+
+head(results)
+
+write.csv(results, "/Users/elyjiahpotter/Desktop/CaseStudy2_LinearRegression_Results.csv")
+```
+
