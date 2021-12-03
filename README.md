@@ -30,3 +30,5 @@ model which uses Job Level, Age, and Department identifier. This model had an RM
 
 
 Lastly, I ran a classification and regression dataset against each of their corresponding models and included the results in this repository.
+
+If you have any questions, please reach me at eppotter@gmail.com
