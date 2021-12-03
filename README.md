@@ -1,6 +1,6 @@
 # CaseStudy-2
 
-## Youtube Link:
+## Youtube Link: https://youtu.be/1Z36Dj-4iSU
 
 ## EDA Page Link: https://eppotter.github.io/Employee-Attrition-EDA.html
 
