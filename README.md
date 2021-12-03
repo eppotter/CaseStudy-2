@@ -2,6 +2,8 @@
 
 ## Youtube Link:
 
+## EDA Page Link: https://eppotter.github.io/Employee-Attrition-EDA.html
+
 ## Project Summary:
 
 For this project, I was tasked with performing an exploratory data analysis on an employee statistic data set with the goal of identifying key factors in employee
